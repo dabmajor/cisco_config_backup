@@ -1,5 +1,9 @@
 #!/usr/bin/python
 
+# This script will iterate through a list of cisco device IP addresses, log into those devices, then save the output of show run to a text file
+# ....this could be easily altered to take a text file or csv list, and should also have some excpetion handling added before production use
+# as of this writing, this has not been tested
+
 import paramiko
 import time
 
