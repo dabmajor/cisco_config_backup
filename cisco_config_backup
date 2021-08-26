@@ -10,39 +10,45 @@ password = "cisco"
 
 def main():
 	# may want to take this IP address in a different way, hard coded for starter script
-	ip_address = "192.168.253.72"
+	ip_addresses = ("10.252.254.1","10.252.254.20")
 
-	# initialze the client
-	ssh_client = paramiko.SSHClient()
+	# iterates through a list of ip_addresses, outputs the running config, and saves it to a file
+	for ip_address in ip_addresses:
+		# initialze the client
+		ssh_client = paramiko.SSHClient()
+		
+		# sends the ssh client and the IP address to initiate session function
+		remote_connection = initiate_ssh_session(ssh_client, ip_address)
 
-	# sends the client and the IP axdress to initiate session function
-	remote_connection = initiate_ssh_session(ssh_client, ip_address)
-
-	# use the connection to do stuff in the router via the ssh connection
-	remote_connection.send("configure terminal\n")
-	remote_connection.send("int loop 0\n")
-	remote_connection.send("ip address 1.1.1.1 255.255.255.255\n")
-	remote_connection.send("int loop 1\n")
-	remote_connection.send("ip address 2.2.2.2 255.255.255.255\n")
-	remote_connection.send("router ospf 1\n")
-	remote_connection.send("network 0.0.0.0 255.255.255.255 area 0\n")
-
-	for n in range (2,21):
-	    print("Creating VLAN ".format(str(n)))
-	    remote_connection.send("vlan " + str(n) +  "\n")
-	    remote_connection.send("name Python_VLAN " + str(n) +  "\n")
-	    # pause long enough for vlan to be created
-	    time.sleep(0.5)
-
-	remote_connection.send("end\n")
-
-	# wait for a second, then output the remote connection session to screen
-	time.sleep(1)
-	output = remote_connection.recv(65535)
-	print(output)
-
-	# be sure to close the client when work is completed
-	ssh_client.close
+		# output the entire running config to the screen
+		remote_connection.send("show run | no-more")
+		
+		# wait for a second, then output the remote connection session to screen
+		time.sleep(1)
+		output = remote_connection.recv(65535)
+		
+		# be sure to close the client when work is completed
+		ssh_client.close
+		
+		# save the config to a text file
+		save_file_name = (str(ip_address) + ".config")
+		with open(save_file_name, 'w') as save_file:
+			still_looking_for_start_of_config = True
+			for line in output:
+				if still_looking_for_start_of_config:
+					# check this line for start string
+					if "show running-config" not in line:
+						# do nothing if not found
+						continue
+					else:
+						# force loop to stop looking for the start
+						still_looking_for_start_of_config = False
+				else:
+					# write all remaining lines to the output file
+					save_file.write(line)
+		
+		# close the file
+		save_file.close
 
 
 # initiates ssh client, pulls public key from device, connects to device and return connection object
